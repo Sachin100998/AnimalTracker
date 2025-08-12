@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Animal & Sales Data Tracker</title>
+<style>
+    body { font-family: Arial, sans-serif; max-width: 1100px; margin: auto; padding: 20px; background-color: #f5f5f5; }
+    h1 { text-align: center; color: #2c3e50; }
+    .tabs { display: flex; flex-wrap: wrap; margin-bottom: 20px; }
+    .tab { padding: 10px 20px; background-color: #ddd; margin: 2px; border-radius: 5px 5px 0 0; cursor: pointer; }
+    .tab.active { background-color: #3498db; color: white; }
+    .tab-content { display: none; background: white; padding: 20px; border-radius: 0 5px 5px 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .tab-content.active { display: block; }
+    .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+    .card { background: white; padding: 15px; text-align: center; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .card h3 { margin: 0; color: #2c3e50; }
+    .card p { font-size: 24px; font-weight: bold; color: #3498db; margin: 5px 0 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #f2f2f2; }
+    .btn-success, .btn-danger, .btn-warning, .btn-info, .btn-export { padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; color: white; }
+    .btn-success { background: #2ecc71; }
+    .btn-danger { background: #e74c3c; }
+    .btn-warning { background: #f39c12; }
+    .btn-info { background: #3498db; }
+    .btn-export { background: #27ae60; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .form-full-width { grid-column: span 2; }
+    input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+    button:hover { opacity: 0.9; }
+    .sold { background-color: #ffecec; }
+    .search-container { margin-bottom: 15px; display: flex; gap: 10px; }
+    .search-container input { flex: 1; }
+    .highlight { background-color: #fffacd; }
+    .gender-male { color: #3498db; }
+    .gender-female { color: #e84393; }
+    .export-container { margin: 20px 0; text-align: right; }
+</style>
+<script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<h1>Animal & Sales Data Tracker</h1>
+
+<div class="export-container">
+    <button class="btn-export" onclick="exportAllToExcel()">Export All Data to Excel</button>
+</div>
+
+<div class="tabs">
+    <div class="tab active" onclick="openTab(event, 'dashboard')">Dashboard</div>
+    <div class="tab" onclick="openTab(event, 'goats')">Goats</div>
+    <div class="tab" onclick="openTab(event, 'poultry')">Poultry</div>
+    <div class="tab" onclick="openTab(event, 'sales')">Sales</div>
+    <div class="tab" onclick="openTab(event, 'add')">Add Beneficiary</div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" class="tab-content active">
+    <h2>Dashboard Overview</h2>
+    <div class="search-container">
+        <input type="text" id="searchId" placeholder="Search by Unique ID..." onkeyup="searchAnimal()">
+        <button class="btn-info" onclick="searchAnimal()">Search</button>
+        <button class="btn-danger" onclick="clearSearch()">Clear</button>
+        <button class="btn-export" onclick="exportToExcel('dashboardTable', 'Beneficiaries')">Export to Excel</button>
+    </div>
+    <div class="summary-cards">
+        <div class="card"><h3>Total Beneficiaries</h3><p id="totalBeneficiaries">0</p></div>
+        <div class="card"><h3>Poultry Beneficiaries</h3><p id="poultryBeneficiaries">0</p></div>
+        <div class="card"><h3>Goat Beneficiaries</h3><p id="goatBeneficiaries">0</p></div>
+        <div class="card"><h3>Poultry Sold</h3><p id="poultrySold">0</p></div>
+        <div class="card"><h3>Goats Sold</h3><p id="goatsSold">0</p></div>
+        <div class="card"><h3>Total Sales</h3><p id="totalSales">₹0</p></div>
+    </div>
+    <table id="dashboardTable">
+        <thead>
+            <tr><th>Beneficiary Name</th><th>Father/Husband</th><th>Unique ID</th><th>Type</th><th>Breed</th><th>Count</th><th>Gender</th><th>Weight</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- Goats -->
+<div id="goats" class="tab-content">
+    <h2>Goat Data</h2>
+    <div class="search-container">
+        <input type="text" id="searchGoatId" placeholder="Search by Unique ID..." onkeyup="searchGoat()">
+        <button class="btn-info" onclick="searchGoat()">Search</button>
+        <button class="btn-danger" onclick="clearGoatSearch()">Clear</button>
+        <button class="btn-export" onclick="exportToExcel('goatTable', 'Goats')">Export to Excel</button>
+    </div>
+    <table id="goatTable">
+        <thead><tr><th>Beneficiary</th><th>Unique ID</th><th>Breed</th><th>Count</th><th>Gender</th><th>Weight</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- Poultry -->
+<div id="poultry" class="tab-content">
+    <h2>Poultry Data</h2>
+    <div class="search-container">
+        <input type="text" id="searchPoultryId" placeholder="Search by Unique ID..." onkeyup="searchPoultry()">
+        <button class="btn-info" onclick="searchPoultry()">Search</button>
+        <button class="btn-danger" onclick="clearPoultrySearch()">Clear</button>
+        <button class="btn-export" onclick="exportToExcel('poultryTable', 'Poultry')">Export to Excel</button>
+    </div>
+    <table id="poultryTable">
+        <thead><tr><th>Beneficiary</th><th>Unique ID</th><th>Breed</th><th>Count</th><th>Gender</th><th>Weight</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- Sales -->
+<div id="sales" class="tab-content">
+    <h2>Sales Records</h2>
+    <div class="search-container">
+        <input type="text" id="searchSaleId" placeholder="Search by Animal ID..." onkeyup="searchSale()">
+        <button class="btn-info" onclick="searchSale()">Search</button>
+        <button class="btn-danger" onclick="clearSaleSearch()">Clear</button>
+        <button class="btn-export" onclick="exportToExcel('salesTable', 'Sales')">Export to Excel</button>
+    </div>
+    <table id="salesTable">
+        <thead>
+            <tr><th>Date</th><th>Beneficiary</th><th>Type</th><th>Breed</th><th>Count</th><th>Gender</th><th>Weight</th><th>Sale Price</th><th>Buyer Info</th><th>Actions</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- Add Beneficiary -->
+<div id="add" class="tab-content">
+    <h2>Add Beneficiary</h2>
+    <form id="addForm" class="form-grid">
+        <div><label>Beneficiary Name</label><input type="text" id="beneficiaryName" required></div>
+        <div><label>Father/Husband Name</label><input type="text" id="fatherName" required></div>
+        <div><label>Aadhar Card</label><input type="text" id="aadhar" required></div>
+        <div><label>Mobile Number</label><input type="text" id="mobile" required></div>
+        <div class="form-full-width"><label>Address</label><textarea id="address" required></textarea></div>
+        <div><label>Unique Beneficiary ID</label><input type="text" id="uniqueId" required></div>
+        <div><label>Animal Type</label>
+            <select id="animalType" required onchange="updateAnimalFields()">
+                <option value="">Select</option>
+                <option value="Goat">Goat</option>
+                <option value="Poultry">Poultry</option>
+            </select>
+        </div>
+        <div><label>Breed</label><input type="text" id="breed" required></div>
+        <div><label>Count</label><input type="number" id="count" min="1" value="1" required></div>
+        <div><label>Gender</label>
+            <select id="gender" required>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Mixed">Mixed</option>
+            </select>
+        </div>
+        <div><label>Weight (kg)</label><input type="number" id="weight" step="0.1" required></div>
+        <div><label>Status</label>
+            <select id="status" required>
+                <option value="Healthy">Healthy</option>
+                <option value="Sold">Sold</option>
+                <option value="Deceased">Deceased</option>
+            </select>
+        </div>
+        <div class="form-full-width"><button type="submit" class="btn-success">Add Beneficiary</button></div>
+    </form>
+</div>
+
+<script>
+let animals = [
+    {beneficiary: 'Ramesh', father: 'Mahesh', aadhar: 'XXXX-XXXX-1234', mobile: '9876543210', address: 'Village A', 
+     uniqueId: 'B001', type: 'Goat', breed: 'Boer', count: 2, gender: 'Male', weight: 45, status: 'Healthy'},
+    {beneficiary: 'Suresh', father: 'Naresh', aadhar: 'XXXX-XXXX-5678', mobile: '9876501234', address: 'Village B', 
+     uniqueId: 'B002', type: 'Poultry', breed: 'Broiler', count: 10, gender: 'Mixed', weight: 2.5, status: 'Healthy'},
+    {beneficiary: 'Geeta', father: 'Ramesh', aadhar: 'XXXX-XXXX-9012', mobile: '9876505678', address: 'Village C', 
+     uniqueId: 'B003', type: 'Goat', breed: 'Saanen', count: 1, gender: 'Female', weight: 38, status: 'Healthy'}
+];
+
+let sales = [
+    {date: '2023-05-15', beneficiary: 'Ramesh', type: 'Goat', breed: 'Boer', count: 1, gender: 'Male', weight: 42, price: 12000, buyer: 'Local Market', animalId: 'B001'},
+    {date: '2023-06-20', beneficiary: 'Suresh', type: 'Poultry', breed: 'Broiler', count: 5, gender: 'Mixed', weight: 2.3, price: 350, buyer: 'Restaurant', animalId: 'B002'}
+];
+
+let currentSearchId = '';
+let currentGoatSearchId = '';
+let currentPoultrySearchId = '';
+let currentSaleSearchId = '';
+
+function openTab(evt, tabName) {
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    evt.currentTarget.classList.add('active');
+    populateTables();
+}
+
+function updateAnimalFields() {
+    const type = document.getElementById('animalType').value;
+    const weightField = document.getElementById('weight');
+    
+    if (type === 'Poultry') {
+        weightField.value = '2.5';
+        weightField.step = '0.1';
+        weightField.min = '0.5';
+        weightField.max = '5';
+    } else if (type === 'Goat') {
+        weightField.value = '30';
+        weightField.step = '1';
+        weightField.min = '10';
+        weightField.max = '100';
+    }
+}
+
+function populateTables() {
+    // Filter animals based on search
+    const filteredAnimals = currentSearchId ? 
+        animals.filter(a => a.uniqueId.toLowerCase().includes(currentSearchId.toLowerCase())) : 
+        animals;
+    
+    const filteredGoats = currentGoatSearchId ? 
+        animals.filter(a => a.type === 'Goat' && a.uniqueId.toLowerCase().includes(currentGoatSearchId.toLowerCase())) : 
+        animals.filter(a => a.type === 'Goat');
+    
+    const filteredPoultry = currentPoultrySearchId ? 
+        animals.filter(a => a.type === 'Poultry' && a.uniqueId.toLowerCase().includes(currentPoultrySearchId.toLowerCase())) : 
+        animals.filter(a => a.type === 'Poultry');
+    
+    const filteredSales = currentSaleSearchId ? 
+        sales.filter(s => s.animalId.toLowerCase().includes(currentSaleSearchId.toLowerCase())) : 
+        sales;
+
+    // Dashboard Table
+    let dashBody = document.querySelector('#dashboardTable tbody');
+    dashBody.innerHTML = filteredAnimals.map(a => `
+        <tr class="${a.status === 'Sold' ? 'sold' : ''} ${a.uniqueId.toLowerCase() === currentSearchId.toLowerCase() ? 'highlight' : ''}">
+            <td>${a.beneficiary}</td><td>${a.father}</td><td>${a.uniqueId}</td>
+            <td>${a.type}</td><td>${a.breed}</td><td>${a.count}</td>
+            <td class="${a.gender === 'Male' ? 'gender-male' : a.gender === 'Female' ? 'gender-female' : ''}">${a.gender}</td>
+            <td>${a.weight}</td><td>${a.status}</td>
+            <td>
+                ${a.status !== 'Sold' ? `<button class="btn-warning" onclick="sellAnimal('${a.uniqueId}')">Sell</button>` : ''}
+                <button class="btn-danger" onclick="deleteAnimal('${a.uniqueId}')">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+    
+    // Goat Table
+    document.querySelector('#goatTable tbody').innerHTML = filteredGoats.map(a => `
+        <tr class="${a.status === 'Sold' ? 'sold' : ''} ${a.uniqueId.toLowerCase() === currentGoatSearchId.toLowerCase() ? 'highlight' : ''}">
+            <td>${a.beneficiary}</td><td>${a.uniqueId}</td><td>${a.breed}</td><td>${a.count}</td>
+            <td class="${a.gender === 'Male' ? 'gender-male' : a.gender === 'Female' ? 'gender-female' : ''}">${a.gender}</td>
+            <td>${a.weight}</td><td>${a.status}</td>
+            <td>
+                ${a.status !== 'Sold' ? `<button class="btn-warning" onclick="sellAnimal('${a.uniqueId}')">Sell</button>` : ''}
+                <button class="btn-danger" onclick="deleteAnimal('${a.uniqueId}')">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+
+    // Poultry Table
+    document.querySelector('#poultryTable tbody').innerHTML = filteredPoultry.map(a => `
+        <tr class="${a.status === 'Sold' ? 'sold' : ''} ${a.uniqueId.toLowerCase() === currentPoultrySearchId.toLowerCase() ? 'highlight' : ''}">
+            <td>${a.beneficiary}</td><td>${a.uniqueId}</td><td>${a.breed}</td><td>${a.count}</td>
+            <td class="${a.gender === 'Male' ? 'gender-male' : a.gender === 'Female' ? 'gender-female' : ''}">${a.gender}</td>
+            <td>${a.weight}</td><td>${a.status}</td>
+            <td>
+                ${a.status !== 'Sold' ? `<button class="btn-warning" onclick="sellAnimal('${a.uniqueId}')">Sell</button>` : ''}
+                <button class="btn-danger" onclick="deleteAnimal('${a.uniqueId}')">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+
+    // Sales Table
+    document.querySelector('#salesTable tbody').innerHTML = filteredSales.map(s => `
+        <tr class="${s.animalId.toLowerCase() === currentSaleSearchId.toLowerCase() ? 'highlight' : ''}">
+            <td>${s.date}</td><td>${s.beneficiary}</td><td>${s.type}</td><td>${s.breed}</td>
+            <td>${s.count}</td>
+            <td class="${s.gender === 'Male' ? 'gender-male' : s.gender === 'Female' ? 'gender-female' : ''}">${s.gender}</td>
+            <td>${s.weight}</td><td>₹${s.price}</td><td>${s.buyer}</td>
+            <td><button class="btn-danger" onclick="deleteSale('${s.animalId}')">Delete</button></td>
+        </tr>
+    `).join('');
+
+    // Summary Cards
+    document.getElementById('totalBeneficiaries').innerText = animals.length;
+    document.getElementById('poultryBeneficiaries').innerText = animals.filter(a => a.type==='Poultry').length;
+    document.getElementById('goatBeneficiaries').innerText = animals.filter(a => a.type==='Goat').length;
+    
+    // Calculate total animals sold (not beneficiaries)
+    const poultrySoldCount = sales.filter(s => s.type === 'Poultry').reduce((sum, sale) => sum + sale.count, 0);
+    const goatsSoldCount = sales.filter(s => s.type === 'Goat').reduce((sum, sale) => sum + sale.count, 0);
+    
+    document.getElementById('poultrySold').innerText = poultrySoldCount;
+    document.getElementById('goatsSold').innerText = goatsSoldCount;
+    document.getElementById('totalSales').innerText = '₹' + sales.reduce((sum, sale) => sum + sale.price, 0);
+}
+
+function exportToExcel(tableID, filename) {
+    // Get the table element
+    const table = document.getElementById(tableID);
+    
+    // Convert table to worksheet
+    const ws = XLSX.utils.table_to_sheet(table);
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    
+    // Export the workbook
+    XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+function exportAllToExcel() {
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Add Beneficiaries sheet
+    const beneficiariesWS = XLSX.utils.table_to_sheet(document.getElementById('dashboardTable'));
+    XLSX.utils.book_append_sheet(wb, beneficiariesWS, "Beneficiaries");
+    
+    // Add Goats sheet
+    const goatsWS = XLSX.utils.table_to_sheet(document.getElementById('goatTable'));
+    XLSX.utils.book_append_sheet(wb, goatsWS, "Goats");
+    
+    // Add Poultry sheet
+    const poultryWS = XLSX.utils.table_to_sheet(document.getElementById('poultryTable'));
+    XLSX.utils.book_append_sheet(wb, poultryWS, "Poultry");
+    
+    // Add Sales sheet
+    const salesWS = XLSX.utils.table_to_sheet(document.getElementById('salesTable'));
+    XLSX.utils.book_append_sheet(wb, salesWS, "Sales");
+    
+    // Export the workbook
+    XLSX.writeFile(wb, "Animal_Tracker_Data.xlsx");
+}
+
+function searchAnimal() {
+    currentSearchId = document.getElementById('searchId').value;
+    populateTables();
+}
+
+function searchGoat() {
+    currentGoatSearchId = document.getElementById('searchGoatId').value;
+    populateTables();
+}
+
+function searchPoultry() {
+    currentPoultrySearchId = document.getElementById('searchPoultryId').value;
+    populateTables();
+}
+
+function searchSale() {
+    currentSaleSearchId = document.getElementById('searchSaleId').value;
+    populateTables();
+}
+
+function clearSearch() {
+    document.getElementById('searchId').value = '';
+    currentSearchId = '';
+    populateTables();
+}
+
+function clearGoatSearch() {
+    document.getElementById('searchGoatId').value = '';
+    currentGoatSearchId = '';
+    populateTables();
+}
+
+function clearPoultrySearch() {
+    document.getElementById('searchPoultryId').value = '';
+    currentPoultrySearchId = '';
+    populateTables();
+}
+
+function clearSaleSearch() {
+    document.getElementById('searchSaleId').value = '';
+    currentSaleSearchId = '';
+    populateTables();
+}
+
+function deleteAnimal(id) {
+    if(confirm('Are you sure you want to delete this record?')) {
+        animals = animals.filter(a => a.uniqueId !== id);
+        sales = sales.filter(s => s.animalId !== id);
+        populateTables();
+    }
+}
+
+function deleteSale(id) {
+    if(confirm('Are you sure you want to delete this sale record?')) {
+        // Change animal status back to Healthy
+        animals.forEach(a => {
+            if(a.uniqueId === id) {
+                a.status = 'Healthy';
+            }
+        });
+        sales = sales.filter(s => s.animalId !== id);
+        populateTables();
+    }
+}
+
+function sellAnimal(id) {
+    const animal = animals.find(a => a.uniqueId === id);
+    if(!animal) return;
+    
+    const sellCount = prompt(`How many ${animal.type}s to sell? (Available: ${animal.count})`, animal.count);
+    if(!sellCount || isNaN(sellCount) || sellCount <= 0 || sellCount > animal.count) return;
+    
+    const price = prompt(`Enter sale price per ${animal.type} (${animal.breed}):`, 
+                        animal.type === 'Goat' ? '12000' : '350');
+    if(!price) return;
+    
+    const buyer = prompt("Enter buyer information:", "Local Market");
+    if(!buyer) return;
+    
+    // Update animal count or status
+    if(sellCount == animal.count) {
+        animal.status = 'Sold';
+    } else {
+        animal.count -= parseInt(sellCount);
+    }
+    
+    // Add to sales records
+    const today = new Date().toISOString().split('T')[0];
+    sales.push({
+        date: today,
+        beneficiary: animal.beneficiary,
+        type: animal.type,
+        breed: animal.breed,
+        count: parseInt(sellCount),
+        gender: animal.gender,
+        weight: animal.weight,
+        price: parseFloat(price) * parseInt(sellCount),
+        buyer: buyer,
+        animalId: animal.uniqueId
+    });
+    
+    populateTables();
+    openTab({currentTarget: document.querySelector('.tab:nth-child(4)')}, 'sales');
+}
+
+document.getElementById('addForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    animals.push({
+        beneficiary: document.getElementById('beneficiaryName').value,
+        father: document.getElementById('fatherName').value,
+        aadhar: document.getElementById('aadhar').value.replace(/\d(?=\d{4})/g, "X"),
+        mobile: document.getElementById('mobile').value,
+        address: document.getElementById('address').value,
+        uniqueId: document.getElementById('uniqueId').value,
+        type: document.getElementById('animalType').value,
+        breed: document.getElementById('breed').value,
+        count: parseInt(document.getElementById('count').value),
+        gender: document.getElementById('gender').value,
+        weight: parseFloat(document.getElementById('weight').value),
+        status: document.getElementById('status').value
+    });
+    this.reset();
+    openTab({currentTarget: document.querySelector('.tab')}, 'dashboard');
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    populateTables();
+    document.getElementById('animalType').addEventListener('change', updateAnimalFields);
+});
+</script>
+
+</body>
+</html>
